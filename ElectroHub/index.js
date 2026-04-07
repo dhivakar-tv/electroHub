@@ -421,10 +421,110 @@ const products = [
         description: "USB to serial communication module",
         rating: "★★★★★"
     },
+    {
+        id: 42,
+        name: "IR Sensor Module",
+        category: "sensors",
+        price: 199,
+        originalPrice: 299,
+        image: "IR sensors.jpg",
+        description: "Infrared obstacle detection sensor for robotics",
+        rating: "★★★★"
+    },
+    {
+        id: 43,
+        name: "OLED Display 0.96\"",
+        category: "display",
+        price: 649,
+        originalPrice: 849,
+        image: "WeMos OLED.webp",
+        description: "Compact high-contrast OLED display module",
+        rating: "★★★★★"
+    },
+    {
+        id: 44,
+        name: "I2C LCD Module",
+        category: "display",
+        price: 199,
+        originalPrice: 299,
+        image: "LCD Display.jpg",
+        description: "I2C adapter for easy 16x2 LCD interfacing",
+        rating: "★★★★"
+    },
+    {
+        id: 45,
+        name: "Breadboard Power Supply",
+        category: "components",
+        price: 349,
+        originalPrice: 499,
+        image: "OIP.webp",
+        description: "Dual voltage module for solderless breadboards",
+        rating: "★★★★"
+    },
+    {
+        id: 46,
+        name: "IR Receiver Module",
+        category: "sensors",
+        price: 299,
+        originalPrice: 399,
+        image: "IR Receiver.webp",
+        description: "Infrared receiver module for remote control projects",
+        rating: "★★★★"
+    },
+    {
+        id: 47,
+        name: "Heart Beat Sensor",
+        category: "sensors",
+        price: 449,
+        originalPrice: 599,
+        image: "heart beat sensors.webp",
+        description: "Pulse sensor for health and fitness applications",
+        rating: "★★★★"
+    },
+    {
+        id: 48,
+        name: "Opto Speed Sensor",
+        category: "sensors",
+        price: 349,
+        originalPrice: 499,
+        image: "Opto Speed sensors.webp",
+        description: "Optical speed detection sensor for motors and robotics",
+        rating: "★★★★"
+    },
+    {
+        id: 49,
+        name: "PIR Motion Sensor",
+        category: "sensors",
+        price: 399,
+        originalPrice: 549,
+        image: "PIR Motion sensors.webp",
+        description: "Passive infrared motion sensor for security systems",
+        rating: "★★★★★"
+    },
+    {
+        id: 50,
+        name: "Proximity Sensor",
+        category: "sensors",
+        price: 299,
+        originalPrice: 399,
+        image: "proximity sensors.webp",
+        description: "Non-contact proximity sensor for automation projects",
+        rating: "★★★★"
+    },
+    {
+        id: 51,
+        name: "Sound Sensor",
+        category: "sensors",
+        price: 249,
+        originalPrice: 349,
+        image: "sound sensors.webp",
+        description: "Microphone-based sound sensor for audio triggering",
+        rating: "★★★★"
+    },
 ];
 
 // Universal discount for all products (makes electronics more affordable)
-const globalDiscountPercent = 25; // 25% discount
+const globalDiscountPercent = 50; // 50% discount
 products.forEach(product => {
     const discountedPrice = Math.round(product.originalPrice * (100 - globalDiscountPercent) / 100);
     product.price = discountedPrice;
@@ -432,6 +532,7 @@ products.forEach(product => {
 
 let cart = [];
 let filteredProducts = [...products];
+let paymentHistory = [];
 let isProcessingPayment = false;
 
 // DOM Elements
@@ -475,6 +576,7 @@ document.addEventListener('DOMContentLoaded', () => {
     displayProducts();
     setupEventListeners();
     loadCart();
+    loadPaymentHistory();
 });
 
 // Setup Event Listeners
@@ -727,9 +829,11 @@ function completePayment() {
 
     simulatePaymentTransfer(totalValue, methodLabel)
         .then(() => {
+            recordPayment(totalValue, methodLabel, cart);
             cart = [];
             updateCartCount();
             saveCart();
+            updateAdminDashboard();
             closePayment();
             closeCart();
             showNotification('Payment successful! Your order is confirmed.');
@@ -773,6 +877,23 @@ function updateAdminDashboard() {
     const categories = [...new Set(products.map(item => item.category))].length;
     const activeCartItems = cart.reduce((sum, item) => sum + item.quantity, 0);
     const catalogValue = products.reduce((sum, item) => sum + item.price, 0);
+    const paymentsCount = paymentHistory.length;
+    const totalRevenue = paymentHistory.reduce((sum, record) => sum + record.amount, 0);
+
+    const paymentRows = paymentHistory.length > 0
+        ? paymentHistory.slice(0, 10).map(record => {
+            const date = new Date(record.timestamp).toLocaleString();
+            const itemCount = record.items.reduce((sum, item) => sum + item.quantity, 0);
+            return `
+                <tr>
+                    <td>${date}</td>
+                    <td>₹${record.amount}</td>
+                    <td>${record.method}</td>
+                    <td>${itemCount}</td>
+                </tr>
+            `;
+        }).join('')
+        : `<tr><td colspan="4" style="text-align:center; padding: 12px; color: #64748b;">No payments processed yet.</td></tr>`;
 
     adminDashboardContent.innerHTML = `
         <div class="dashboard-summary">
@@ -792,8 +913,32 @@ function updateAdminDashboard() {
                 <h3>Catalog Value</h3>
                 <p>₹${catalogValue}</p>
             </div>
+            <div class="dashboard-card">
+                <h3>Payments Processed</h3>
+                <p>${paymentsCount}</p>
+            </div>
+            <div class="dashboard-card">
+                <h3>Total Revenue</h3>
+                <p>₹${totalRevenue}</p>
+            </div>
         </div>
-        <p class="dashboard-note">Admin dashboard is a demo panel for managing your store. Orders and backend sync would appear here once backend integration is added.</p>
+        <div class="dashboard-payments">
+            <h3>Recent Payment History</h3>
+            <table class="payments-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Items</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${paymentRows}
+                </tbody>
+            </table>
+        </div>
+        <p class="dashboard-note">Admin dashboard is a demo panel for managing your store and viewing completed payment history.</p>
     `;
 }
 
@@ -881,6 +1026,36 @@ function loadCart() {
         cart = JSON.parse(saved);
         updateCartCount();
     }
+}
+
+// Save payment history to LocalStorage
+function savePaymentHistory() {
+    localStorage.setItem('paymentHistory', JSON.stringify(paymentHistory));
+}
+
+// Load payment history from LocalStorage
+function loadPaymentHistory() {
+    const savedHistory = localStorage.getItem('paymentHistory');
+    if (savedHistory) {
+        paymentHistory = JSON.parse(savedHistory);
+    }
+}
+
+// Record completed payment for admin dashboard
+function recordPayment(amount, method, items) {
+    const paymentRecord = {
+        id: Date.now(),
+        timestamp: new Date().toISOString(),
+        amount,
+        method,
+        items: items.map(item => ({ id: item.id, name: item.name, quantity: item.quantity, price: item.price }))
+    };
+
+    paymentHistory.unshift(paymentRecord);
+    if (paymentHistory.length > 20) {
+        paymentHistory = paymentHistory.slice(0, 20);
+    }
+    savePaymentHistory();
 }
 
 // Handle Contact Form
